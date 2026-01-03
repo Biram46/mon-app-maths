@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛠️ Admin - Cours Ndiaye</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-blue: #2196F3;
+            --primary-green: #4CAF50;
+            --primary-red: #f44336;
+            --bg-dark: #121212;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --text-main: #e0e0e0;
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-gold: #FFD700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, var(--primary-blue), var(--accent-gold));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 500;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+
+        .nav-links a:hover {
+            opacity: 1;
+            color: var(--primary-blue);
+        }
+
+        main {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .admin-card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(5px);
+        }
+
+        h2 {
+            margin-bottom: 1.5rem;
+            color: var(--accent-gold);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .stats-table th,
+        .stats-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stats-table th {
+            font-weight: 600;
+            opacity: 0.7;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .badge-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--primary-green);
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">🛠️ Admin Cours Ndiaye</div>
+        <nav class="nav-links">
+            <a href="index.html">🏠 Accueil Élève</a>
+            <a href="#" onclick="handleLogout()">🚪 Déconnexion</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Exercise Management -->
+        <section class="admin-card">
+            <h2>📝 Ajouter un Cours</h2>
+            <form id="add-course-form">
+                <div class="form-group">
+                    <label>Titre du Cours</label>
+                    <input type="text" placeholder="Ex: Les Nombres Décimaux" required>
+                </div>
+                <div class="form-group">
+                    <label>Description Courte</label>
+                    <input type="text" placeholder="Ex: Apprendre les virgules" required>
+                </div>
+                <div class="form-group">
+                    <label>Théorie (HTML supporté)</label>
+                    <textarea rows="5" placeholder="Le contenu du cours..."></textarea>
+                </div>
+                <button type="submit">Enregistrer le Cours</button>
+            </form>
+
+            <h2 style="margin-top: 2rem;">📚 Liste des Cours</h2>
+            <div id="admin-course-list">
+                <!-- Courses injected here -->
+            </div>
+        </section>
+
+        <!-- Student Progress -->
+        <section class="admin-card">
+            <h2>📊 Résultats des Élèves</h2>
+            <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+                <select id="class-filter">
+                    <option value="all">Toutes les classes</option>
+                    <option value="6eme">6ème</option>
+                    <option value="5eme">5ème</option>
+                    <option value="4eme">4ème</option>
+                    <option value="3eme">3ème</option>
+                </select>
+            </div>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Élève</th>
+                        <th>Classe</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="stats-body">
+                    <!-- Data will be injected here -->
+                    <tr>
+                        <td>Exemple Élève</td>
+                        <td>6ème</td>
+                        <td>85/100</td>
+                        <td><span class="badge badge-success">Actif</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        // Config Supabase (Placeholder)
+        const SUPABASE_URL = "https://fhpfpnlkcvhxotbblzps.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_xxx";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            window.location.href = 'index.html';
+        }
+
+        // Security check
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (!session) {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Add Course Logic
+        document.getElementById('add-course-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const newCourse = {
+                title: form.querySelector('input[type="text"]:nth-of-type(1)').value,
+                description: form.querySelector('input[type="text"]:nth-of-type(2)').value,
+                theory: form.querySelector('textarea').value,
+                exercises: [] // Placeholder for now
+            };
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('courses')
+                    .insert([newCourse])
+                    .select();
+
+                if (error) throw error;
+                alert('Course ajouté avec succès !');
+                form.reset();
+                loadCoursesAdmin();
+            } catch (err) {
+                console.error(err);
+                alert('Erreur lors de l\'ajout : ' + err.message);
+            }
+        });
+
+        async function loadCoursesAdmin() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('courses')
+                    .select('id, title');
+
+                if (error) throw error;
+
+                const list = document.getElementById('admin-course-list');
+                list.innerHTML = data.map(c => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:0.8rem; background:rgba(255,255,255,0.02); margin-bottom:0.5rem; border-radius:8px; border:1px solid var(--glass-border);">
+                        <span>${c.title}</span>
+                        <button onclick="deleteCourse(${c.id})" style="background:var(--primary-red); padding:0.4rem 0.8rem; font-size:0.8rem;">Supprimer</button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error("Erreur list cours:", err);
+            }
+        }
+
+        async function deleteCourse(id) {
+            if (!confirm("Voulez-vous vraiment supprimer ce cours ?")) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('courses')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+                loadCoursesAdmin();
+            } catch (err) {
+                alert("Erreur suppression: " + err.message);
+            }
+        }
+
+        // Load Student Stats
+        async function loadStats() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_stats')
+                    .select('*');
+
+                if (error) throw error;
+
+                const tbody = document.getElementById('stats-body');
+                tbody.innerHTML = data.map(stat => `
+                    <tr>
+                        <td>${stat.user_id.substring(0, 8)}...</td>
+                        <td>Inconnue</td>
+                        <td>${stat.progress_data?.score || 0}/100</td>
+                        <td><span class="badge badge-success">Actif</span></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Erreur stats:", err);
+            }
+        }
+
+        loadStats();
+        loadCoursesAdmin();
+    </script>
+</body>
+
+</html>

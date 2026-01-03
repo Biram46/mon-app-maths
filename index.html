@@ -257,6 +257,9 @@
     <header>
         <div class="logo">🤖 Tuteur Maths Robot</div>
         <div class="auth-buttons">
+            <button class="btn-login" id="btn-admin"
+                style="display: none; background: var(--bg-card); border: 1px solid var(--glass-border);"
+                onclick="window.location.href='admin.html'">⚙️ Admin</button>
             <button class="btn-login" onclick="toggleModal('login-modal')">Connexion</button>
             <button class="btn-signup" onclick="toggleModal('signup-modal')">Inscription</button>
             <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
@@ -372,6 +375,7 @@
             document.querySelector('.btn-login').style.display = loggedIn ? 'none' : 'block';
             document.querySelector('.btn-signup').style.display = loggedIn ? 'none' : 'block';
             document.querySelector('.btn-logout').style.display = loggedIn ? 'block' : 'none';
+            document.getElementById('btn-admin').style.display = loggedIn ? 'block' : 'none'; // Visible for all logged in for now
             document.getElementById('app-content').style.display = loggedIn ? 'grid' : 'none';
             document.getElementById('welcome-screen').style.display = loggedIn ? 'none' : 'flex';
 
@@ -564,21 +568,36 @@
             document.getElementById('stat-level').innerText = userProgress.completed.length > 3 ? "Intermédiaire" : "Débutant";
         }
 
-        function loadCourses() {
+        let coursesData = COURSES; // Fallback
+
+        async function loadCourses() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('courses')
+                    .select('*');
+
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    coursesData = data;
+                }
+            } catch (err) {
+                console.warn("Supabase fetch failed, using internal COURSES:", err);
+            }
+
             const list = document.getElementById('course-list');
-            list.innerHTML = COURSES.map(c => `
+            list.innerHTML = coursesData.map(c => `
                 <div class="course-card" onclick="openCourse(${c.id})">
                     <div style="display:flex; justify-content:space-between;">
                         <h3>${c.title}</h3>
                         <span>${userProgress.completed.includes(c.id) ? '✅' : '⏳'}</span>
                     </div>
-                    <p>${c.desc}</p>
+                    <p>${c.description || c.desc}</p>
                 </div>
             `).join('');
         }
 
         function openCourse(id) {
-            const course = COURSES.find(c => c.id === id);
+            const course = coursesData.find(c => c.id === id);
             const disp = document.getElementById('course-display');
 
             let exercisesHtml = course.exercises.map((ex, idx) => `
