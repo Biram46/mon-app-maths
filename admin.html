@@ -399,36 +399,6 @@
             document.querySelectorAll('.admin-panel').forEach(p => p.style.display = 'none');
             document.getElementById(`panel-${id}`).style.display = 'block';
         }
-
-        async function initAdmin() {
-            // 1. Afficher l'interface tout de suite pour éviter page blanche si erreur
-            showPanel('levels');
-
-            // 2. Charger les données avec gestion d'erreurs individuelle
-            try { await loadLevels(); } catch (e) { console.error("Erreur Levels:", e); }
-            try { await loadChapters(); } catch (e) { console.error("Erreur Chapters:", e); alert("Erreur chargement chapitres (voir console). Vérifiez la base de données."); }
-            try { await loadStats(); } catch (e) { console.error("Erreur Stats:", e); }
-        }
-
-        async function loadLevels() {
-            const { data } = await supabaseClient.from('levels').select('*').order('display_order');
-
-            // UI Update for Levels List
-            const list = document.getElementById('admin-level-list');
-            if (list) {
-                list.innerHTML = data.map(l => `
-                    <div style="display:flex; justify-content:space-between; padding:0.8rem; background:rgba(255,255,255,0.02); margin-bottom:0.5rem; border-radius:8px; border:1px solid var(--glass-border);">
-                        <span><b>${l.name}</b> (Ordre: ${l.display_order})</span>
-                        <button onclick="deleteLevel(${l.id})" style="background:var(--primary-red); padding:0.4rem 0.8rem; font-size:0.8rem;">Supprimer</button>
-                    </div>
-                `).join('');
-            }
-
-            // Update selects
-            const select = document.getElementById('chapter-level-id');
-            if (select) select.innerHTML = data.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
-        }
-
         async function loadChapters() {
             const { data } = await supabaseClient.from('chapters').select('*, levels(name)').order('level_id, display_order');
 
