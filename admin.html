@@ -439,8 +439,13 @@
         // --- HANDLERS ---
         document.getElementById('add-level-form').onsubmit = async (e) => {
             e.preventDefault();
+            const name = document.getElementById('level-name').value;
+            // Génération simple d'un slug : minuscule et remplace espaces par tirets
+            const slug = name.toLowerCase().trim().replace(/[\s\W-]+/g, '-');
+
             const level = {
-                name: document.getElementById('level-name').value,
+                name: name,
+                slug: slug,
                 display_order: document.getElementById('level-order').value
             };
             const { error } = await supabaseClient.from('levels').insert([level]);
