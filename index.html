@@ -356,6 +356,20 @@
         </div>
     </div>
 
+    <!-- Interactive Exercise Modal -->
+    <div id="interactive-modal" class="modal" onclick="closeOnOverlay(event)">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 id="interactive-title" style="color:var(--accent-gold);">Exercices Interactifs</h2>
+                <button onclick="toggleModal('interactive-modal')"
+                    style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
+            </div>
+            <div id="interactive-body">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script>
         // --- CONFIG SUPABASE ---
@@ -370,6 +384,12 @@
         ALTER TABLE courses ADD COLUMN category TEXT DEFAULT 'standard';
         ALTER TABLE courses ADD COLUMN type TEXT DEFAULT 'standard';
         */
+
+        // --- GLOBAL VARIABLES (Moved to top) ---
+        let currentUser = null;
+        let isRobotSpeaking = false;
+        let userProgress = { completed: [], score: 0 };
+        let currentLevels = [];
 
         // --- AUTH LOGIC ---
         async function handleAuth(e, type) {
@@ -403,7 +423,10 @@
             document.querySelector('.btn-login').style.display = loggedIn ? 'none' : 'block';
             document.querySelector('.btn-signup').style.display = loggedIn ? 'none' : 'block';
             document.querySelector('.btn-logout').style.display = loggedIn ? 'block' : 'none';
-            document.getElementById('btn-admin').style.display = loggedIn ? 'block' : 'none'; // Visible for all logged in for now
+            document.getElementById('btn-admin').style.display = loggedIn ? 'block' : 'none';
+
+            // TOUJOURS afficher l'interface principale pour tester, même si pas connecté (optionnel, selon votre besoin)
+            // Pour l'instant on garde la logique : connecté = app visible
             document.getElementById('app-content').style.display = loggedIn ? 'grid' : 'none';
             document.getElementById('welcome-screen').style.display = loggedIn ? 'none' : 'flex';
 
@@ -412,7 +435,52 @@
             }
         });
 
-        // --- APP LOGIC ---
+        // --- NEW HIERARCHICAL LOGIC ---
+
+
+        async function initApp(user) {
+            console.log("Initialisation de l'app pour :", user.email);
+            currentUser = user;
+            await loadUserProgress();
+            await loadLevels(); // Appel des niveaux
+            updateStatsUI();
+            startRobot();
+        }
+
+        async function loadLevels() {
+            console.log("Début chargement niveaux...");
+            try {
+                const { data, error } = await supabaseClient
+                    .from('levels')
+                    .select('*')
+                    .order('display_order');
+
+                if (error) {
+                    console.error("Erreur Supabase reçue :", error);
+                    throw error;
+                }
+
+                console.log("Données niveaux reçues :", data);
+
+                if (data && data.length > 0) {
+                    currentLevels = data;
+                    const nav = document.getElementById('level-nav');
+                    nav.innerHTML = data.map(lvl => `
+                        <button onclick="showChapters(${lvl.id}, '${lvl.name}')" 
+                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); text-align: left; width: 100%; color: white; padding: 0.8rem; border-radius: 8px;">
+                            ${lvl.name}
+                        </button>
+                    `).join('');
+                } else {
+                    document.getElementById('level-nav').innerHTML = '<p style="opacity:0.5; font-size:0.8rem;">Aucun niveau.</p>';
+                    console.warn("Table levels vide ou illisible.");
+                }
+            } catch (err) {
+                console.error("Erreur niveaux:", err);
+                document.getElementById('level-nav').innerHTML = '<p style="color:red; font-size:0.8rem;">Erreur.</p>';
+                alert("Erreur chargement niveaux : " + err.message);
+            }
+        }
         function toggleModal(id) {
             const modal = document.getElementById(id);
             modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
@@ -423,13 +491,17 @@
         }
 
         // --- ROBOT ENGINE ---
-        const canvas = document.getElementById('robot-canvas');
-        const ctx = canvas.getContext('2d');
+        // Canvas initialized strictly inside startRobot to avoid null errors
+        let canvas, ctx;
         let blinkTimer = 0;
 
         function startRobot() {
-            canvas.width = 400;
-            canvas.height = 400;
+            canvas = document.getElementById('robot-canvas'); // May be null if not in DOM? No, it should be removed or commented out if not used.
+            ctx = canvas ? canvas.getContext('2d') : null;
+            // Wait, looking at HTML structure, main canvas 'robot-canvas' is missing from 'main'. 
+            // Only 'robot-canvas-small' exists in the sidebar.
+            // Adjusting code to be safe.
+
             const smallCanvas = document.getElementById('robot-canvas-small');
             if (smallCanvas) {
                 smallCanvas.width = 400;
@@ -557,47 +629,7 @@
             }
         ];
 
-        let currentUser = null;
-        let userProgress = { completed: [], score: 0 };
 
-        // --- NEW HIERARCHICAL LOGIC ---
-        let currentLevels = [];
-
-        async function initApp(user) {
-            currentUser = user;
-            await loadUserProgress();
-            await loadLevels();
-            updateStatsUI();
-            startRobot();
-        }
-
-        async function loadLevels() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('levels')
-                    .select('*')
-                    .order('display_order');
-
-                if (error) throw error;
-
-                if (data && data.length > 0) {
-                    currentLevels = data;
-                    const nav = document.getElementById('level-nav');
-                    nav.innerHTML = data.map(lvl => `
-                        <button onclick="showChapters(${lvl.id}, '${lvl.name}')" 
-                            style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); text-align: left; width: 100%; color: white; padding: 0.8rem; border-radius: 8px;">
-                            ${lvl.name}
-                        </button>
-                    `).join('');
-                } else {
-                    document.getElementById('level-nav').innerHTML = '<p style="opacity:0.5; font-size:0.8rem;">Aucun niveau configuré.</p>';
-                    console.log("Aucun niveau trouvé dans la table 'levels'.");
-                }
-            } catch (err) {
-                console.error("Erreur chargement niveaux:", err);
-                document.getElementById('level-nav').innerHTML = '<p style="color:var(--primary-red); font-size:0.8rem;">Erreur de chargement.</p>';
-            }
-        }
 
         async function loadUserProgress() {
             try {
@@ -705,6 +737,37 @@
             }
         }
 
+        function openInteractive(courseId) {
+            const course = COURSES.find(c => c.id == courseId);
+            if (!course) {
+                alert("Désolé, contenu interactif introuvable pour cet ID : " + courseId);
+                return;
+            }
+
+            document.getElementById('interactive-title').innerText = "🤖 " + course.title;
+            const container = document.getElementById('interactive-body');
+
+            // Build the quiz UI
+            container.innerHTML = `
+                <div style="background:rgba(255,255,255,0.05); padding:1rem; border-radius:8px; margin-bottom:1rem;">
+                    <p><b>Théorie :</b> ${course.theory}</p>
+                </div>
+                ${course.exercises.map((ex, idx) => `
+                    <div style="margin-bottom: 1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:1rem;">
+                        <p style="margin-bottom:0.5rem;">Q${idx + 1}: ${ex.question}</p>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input type="number" id="ans-${courseId}-${idx}" placeholder="Votre réponse" style="flex-grow:1; padding:0.5rem;">
+                            <button onclick="checkAnswer(${courseId}, ${idx}, ${ex.answer})" style="background:var(--primary-blue);">Vérifier</button>
+                        </div>
+                        <span id="feedback-${courseId}-${idx}" style="font-weight:bold; margin-top:0.5rem; display:block;"></span>
+                    </div>
+                `).join('')}
+            `;
+
+            updateRobotSpeech(`C'est parti pour les exercices sur : ${course.title} !`);
+            toggleModal('interactive-modal');
+        }
+
         function renderResourceList(list) {
             if (list.length === 0) return `<p style="opacity: 0.5; font-style: italic;">Bientôt disponible...</p>`;
             return list.map(r => `
@@ -790,66 +853,6 @@
             }, 1000);
         }
 
-        let isRobotSpeaking = false;
-        // Modified animation mouth to use isRobotSpeaking
-        const originalAnimateRobot = animateRobot;
-        animateRobot = function (time) {
-            ctx.clearRect(0, 0, 400, 400);
-
-            // Body/Head (Gold Gradient)
-            const grad = ctx.createRadialGradient(200, 200, 50, 200, 200, 150);
-            grad.addColorStop(0, '#FFD700');
-            grad.addColorStop(1, '#B8860B');
-
-            ctx.beginPath();
-            ctx.arc(200, 200, 100, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-            ctx.lineWidth = 5;
-            ctx.stroke();
-
-            // Eyes
-            const eyeY = 180 + Math.sin(time / 500) * 5;
-            blinkTimer++;
-            const isBlinking = blinkTimer % 200 > 190;
-
-            ctx.fillStyle = '#000';
-            if (isBlinking) {
-                ctx.fillRect(160, eyeY, 20, 2);
-            } else {
-                ctx.beginPath();
-                ctx.arc(160, eyeY, 12, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#00FFFF';
-                ctx.beginPath();
-                ctx.arc(160, eyeY, 5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            ctx.fillStyle = '#000';
-            if (isBlinking) {
-                ctx.fillRect(220, eyeY, 20, 2);
-            } else {
-                ctx.beginPath();
-                ctx.arc(220, eyeY, 12, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#00FFFF';
-                ctx.beginPath();
-                ctx.arc(220, eyeY, 5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Mouth (Animation when speaking)
-            ctx.strokeStyle = '#000';
-            ctx.beginPath();
-            ctx.moveTo(170, 240);
-            const mouthWave = isRobotSpeaking ? Math.sin(time / 50) * 15 : Math.sin(time / 200) * 5;
-            ctx.quadraticCurveTo(200, 250 + mouthWave, 230, 240);
-            ctx.stroke();
-
-            requestAnimationFrame(animateRobot);
-        }
 
     </script>
 </body>

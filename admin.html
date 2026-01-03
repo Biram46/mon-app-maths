@@ -337,6 +337,13 @@
                             <label>Lien LaTeX</label>
                             <input type="url" id="res-latex" placeholder="https://...">
                         </div>
+                        <div class="form-group">
+                            <label>ID Interactif (Optionnel)</label>
+                            <input type="number" id="res-interactive-id"
+                                placeholder="ID (ex: 1, 2...) pour lier aux quiz robot">
+                            <small style="opacity:0.6; font-size:0.7rem;">Référence l'ID dans le tableau COURSES du
+                                code.</small>
+                        </div>
                         <button type="submit" style="grid-column: span 2;">Enregistrer la Ressource</button>
                     </form>
                 </div>
@@ -376,10 +383,23 @@
             const password = document.getElementById('admin-password').value;
 
             try {
+                // 1. Connexion Supabase
                 const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                 if (error) throw error;
-                // session update will trigger UI change via onAuthStateChange
+
+                // 2. Vérification Email (Sécurité Client-side simple)
+                // IMPORTANT: Remplacez ces emails par les vôtres
+                const ALLOWED_ADMINS = ['biram26@yahoo.fr'];
+                const userEmail = data.user.email;
+
+                if (!ALLOWED_ADMINS.includes(userEmail)) {
+                    await supabaseClient.auth.signOut();
+                    throw new Error("Accès refusé. Cet email n'est pas administrateur.");
+                }
+
+                // session update will trigger UI change
             } catch (err) {
+                console.error(err);
                 alert("Erreur de connexion : " + err.message);
             }
         }
@@ -494,8 +514,13 @@
                 type: document.getElementById('res-type').value,
                 pdf_url: document.getElementById('res-pdf').value,
                 docx_url: document.getElementById('res-docx').value,
-                latex_url: document.getElementById('res-latex').value
+                latex_url: document.getElementById('res-latex').value,
+                interactive_id: document.getElementById('res-interactive-id').value || null
             };
+
+            // Nettoyage des champs vides
+            Object.keys(res).forEach(k => res[k] === "" && delete res[k]);
+
             const { error } = await supabaseClient.from('resources').insert([res]);
             if (!error) { alert('Ressource ajoutée !'); e.target.reset(); }
         };
