@@ -255,7 +255,7 @@
 <body>
 
     <header>
-        <div class="logo">🤖 Tuteur Maths Robot</div>
+        <div class="logo">🤖 Robot Maths - Lycée</div>
         <div class="auth-buttons">
             <button class="btn-login" id="btn-admin"
                 style="display: none; background: var(--bg-card); border: 1px solid var(--glass-border);"
@@ -267,41 +267,59 @@
     </header>
 
     <main id="app-content" style="display: none;">
-        <!-- Robot Column -->
-        <aside class="column" style="display: flex; flex-direction: column;">
-            <h3>Tuteur Virtuel</h3>
-            <canvas id="robot-canvas"
-                style="width: 100%; aspect-ratio: 1; background: rgba(0, 0, 0, 0.2); border-radius: 50%; margin-bottom: 1rem;"></canvas>
-            <div class="speech-bubble" id="robot-speech"
-                style="background: white; color: black; padding: 1rem; border-radius: 12px; position: relative; margin-top: 1rem; font-size: 0.9rem; line-height: 1.4;">
-                Bonjour ! Je suis ton tuteur robot. Prêt à faire des maths ?
+        <!-- Navigation Sidebar -->
+        <aside class="column">
+            <div style="margin-bottom: 2 Brem;">
+                <h3 style="color: var(--accent-gold); margin-bottom: 1rem;">📚 Par Niveau</h3>
+                <div id="level-nav" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <!-- Levels loaded here -->
+                    <p style="opacity: 0.5; font-size: 0.8rem;">Chargement des niveaux...</p>
+                </div>
             </div>
 
-            <div class="chat-container">
-                <div id="chat-messages"></div>
+            <div style="margin-top: 2rem;">
+                <h3>Votre Progression</h3>
+                <div id="stats-container">
+                    <div class="stat-item"><span>Exercices finis</span> <b id="stat-done">0</b></div>
+                    <div class="stat-item"><span>Précision</span> <b id="stat-accuracy">0%</b></div>
+                    <div class="stat-item"><span>Niveau Robot</span> <b id="stat-level">Débutant</b></div>
+                </div>
+            </div>
+
+            <div
+                style="margin-top: 2rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--glass-border);">
+                <h4>Tuteur Virtuel</h4>
+                <canvas id="robot-canvas-small" style="width: 100%; aspect-ratio: 1;"></canvas>
+                <div id="robot-speech-small" style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.8;">
+                    Prêt pour le cours ?
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <section class="column content-area" id="main-view">
+            <div id="content-header">
+                <h2>Bienvenue sur Robot Maths</h2>
+                <p>Sélectionnez un niveau dans la barre latérale pour commencer.</p>
+            </div>
+            <div id="dynamic-content">
+                <!-- Chapters or Resources injected here -->
+                <div style="display: flex; justify-content: center; align-items: center; min-height: 200px;">
+                    <img src="math_robot_hero.png" style="max-width: 200px; opacity: 0.3;" alt="Robot">
+                </div>
+            </div>
+        </section>
+
+        <!-- Chat / Robot Hub -->
+        <aside class="column">
+            <h3>🤖 Aide & Chat</h3>
+            <div class="chat-container" style="height: 400px;">
+                <div id="chat-messages" style="height: 320px;"></div>
                 <div class="chat-input-area">
                     <input type="text" id="chat-input" placeholder="Pose une question..."
                         onkeypress="if(event.key === 'Enter') sendChatMessage()">
                     <button onclick="sendChatMessage()" style="padding: 0.5rem;">🚀</button>
                 </div>
-            </div>
-        </aside>
-
-        <!-- Main Course Area -->
-        <section class="column content-area" id="course-display">
-            <h2>Tes Cours</h2>
-            <div id="course-list">
-                <!-- Courses injected here -->
-            </div>
-        </section>
-
-        <!-- Progress/Stats Column -->
-        <aside class="column">
-            <h3>Progression</h3>
-            <div id="stats-container">
-                <div class="stat-item"><span>Exercices finis</span> <b id="stat-done">0</b></div>
-                <div class="stat-item"><span>Précision</span> <b id="stat-accuracy">0%</b></div>
-                <div class="stat-item"><span>Niveau</span> <b id="stat-level">Débutant</b></div>
             </div>
         </aside>
     </main>
@@ -342,6 +360,14 @@
         const SUPABASE_URL = "https://fhpfpnlkcvhxotbblzps.supabase.co";
         const SUPABASE_KEY = "sb_publishable_xxx";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        /* 
+        IMPORTANT: Pour que la section EAM fonctionne, vous devez ajouter la colonne 'category' et 'type' à votre table 'courses' dans Supabase.
+        Exécutez ce SQL dans l'éditeur SQL de Supabase :
+        
+        ALTER TABLE courses ADD COLUMN category TEXT DEFAULT 'standard';
+        ALTER TABLE courses ADD COLUMN type TEXT DEFAULT 'standard';
+        */
 
         // --- AUTH LOGIC ---
         async function handleAuth(e, type) {
@@ -408,64 +434,75 @@
         function startRobot() {
             canvas.width = 400;
             canvas.height = 400;
+            const smallCanvas = document.getElementById('robot-canvas-small');
+            if (smallCanvas) {
+                smallCanvas.width = 400;
+                smallCanvas.height = 400;
+            }
             requestAnimationFrame(animateRobot);
         }
 
+        const blinkTimerMax = 200;
         function animateRobot(time) {
-            ctx.clearRect(0, 0, 400, 400);
+            const canvases = [canvas, document.getElementById('robot-canvas-small')].filter(c => c !== null);
+            canvases.forEach(canv => {
+                const cctx = canv.getContext('2d');
+                cctx.clearRect(0, 0, 400, 400);
 
-            // Body/Head (Gold Gradient)
-            const grad = ctx.createRadialGradient(200, 200, 50, 200, 200, 150);
-            grad.addColorStop(0, '#FFD700');
-            grad.addColorStop(1, '#B8860B');
+                // Body/Head (Gold Gradient)
+                const grad = cctx.createRadialGradient(200, 200, 50, 200, 200, 150);
+                grad.addColorStop(0, '#FFD700');
+                grad.addColorStop(1, '#B8860B');
 
-            ctx.beginPath();
-            ctx.arc(200, 200, 100, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-            ctx.lineWidth = 5;
-            ctx.stroke();
+                cctx.beginPath();
+                cctx.arc(200, 200, 100, 0, Math.PI * 2);
+                cctx.fillStyle = grad;
+                cctx.fill();
+                cctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                cctx.lineWidth = 5;
+                cctx.stroke();
 
-            // Eyes
-            const eyeY = 180 + Math.sin(time / 500) * 5; // Floating eye movement
-            blinkTimer++;
-            const isBlinking = blinkTimer % 200 > 190;
+                // Eyes
+                const eyeY = 180 + Math.sin(time / 500) * 5;
+                blinkTimer++;
+                const isBlinking = blinkTimer % blinkTimerMax > 190;
 
-            ctx.fillStyle = '#000';
-            // Left Eye
-            if (isBlinking) {
-                ctx.fillRect(160, eyeY, 20, 2);
-            } else {
-                ctx.beginPath();
-                ctx.arc(160, eyeY, 12, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#00FFFF'; // Glow
-                ctx.beginPath();
-                ctx.arc(160, eyeY, 5, 0, Math.PI * 2);
-                ctx.fill();
-            }
+                cctx.fillStyle = '#000';
+                // Left Eye
+                if (isBlinking) {
+                    cctx.fillRect(160, eyeY, 20, 2);
+                } else {
+                    cctx.beginPath();
+                    cctx.arc(160, eyeY, 12, 0, Math.PI * 2);
+                    cctx.fill();
+                    cctx.fillStyle = '#00FFFF';
+                    cctx.beginPath();
+                    cctx.arc(160, eyeY, 5, 0, Math.PI * 2);
+                    cctx.fill();
+                }
 
-            // Right Eye
-            ctx.fillStyle = '#000';
-            if (isBlinking) {
-                ctx.fillRect(220, eyeY, 20, 2);
-            } else {
-                ctx.beginPath();
-                ctx.arc(220, eyeY, 12, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#00FFFF';
-                ctx.beginPath();
-                ctx.arc(220, eyeY, 5, 0, Math.PI * 2);
-                ctx.fill();
-            }
+                // Right Eye
+                cctx.fillStyle = '#000';
+                if (isBlinking) {
+                    cctx.fillRect(220, eyeY, 20, 2);
+                } else {
+                    cctx.beginPath();
+                    cctx.arc(220, eyeY, 12, 0, Math.PI * 2);
+                    cctx.fill();
+                    cctx.fillStyle = '#00FFFF';
+                    cctx.beginPath();
+                    cctx.arc(220, eyeY, 5, 0, Math.PI * 2);
+                    cctx.fill();
+                }
 
-            // Mouth (Wave)
-            ctx.strokeStyle = '#000';
-            ctx.beginPath();
-            ctx.moveTo(170, 240);
-            ctx.quadraticCurveTo(200, 250 + Math.sin(time / 200) * 10, 230, 240);
-            ctx.stroke();
+                // Mouth (Animation when speaking)
+                cctx.strokeStyle = '#000';
+                cctx.beginPath();
+                cctx.moveTo(170, 240);
+                const mouthWave = isRobotSpeaking ? Math.sin(time / 50) * 15 : Math.sin(time / 200) * 5;
+                cctx.quadraticCurveTo(200, 250 + mouthWave, 230, 240);
+                cctx.stroke();
+            });
 
             requestAnimationFrame(animateRobot);
         }
@@ -527,97 +564,114 @@
         let currentUser = null;
         let userProgress = { completed: [], score: 0 };
 
+        // --- NEW HIERARCHICAL LOGIC ---
+        let currentLevels = [];
+
         async function initApp(user) {
             currentUser = user;
             await loadUserProgress();
-            loadCourses();
-            startRobot();
+            await loadLevels();
             updateStatsUI();
+            startRobot();
         }
 
-        async function loadUserProgress() {
+        async function loadLevels() {
             const { data, error } = await supabaseClient
-                .from('user_stats')
+                .from('levels')
                 .select('*')
-                .eq('user_id', currentUser.id)
-                .single();
+                .order('display_order');
 
             if (data) {
-                userProgress = data.progress_data || userProgress;
-            } else if (error && error.code === 'PGRST116') {
-                // No row found, create one
-                await supabaseClient.from('user_stats').insert({
-                    user_id: currentUser.id,
-                    progress_data: userProgress
-                });
+                currentLevels = data;
+                const nav = document.getElementById('level-nav');
+                nav.innerHTML = data.map(lvl => `
+                    <button onclick="showChapters(${lvl.id}, '${lvl.name}')" 
+                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); text-align: left; width: 100%; color: white; padding: 0.8rem; border-radius: 8px;">
+                        ${lvl.name}
+                    </button>
+                `).join('');
             }
         }
 
-        async function saveProgress() {
-            await supabaseClient
-                .from('user_stats')
-                .update({ progress_data: userProgress })
-                .eq('user_id', currentUser.id);
-            updateStatsUI();
-        }
-
-        function updateStatsUI() {
-            document.getElementById('stat-done').innerText = userProgress.completed.length;
-            const accuracy = userProgress.completed.length > 0 ? Math.min(100, Math.round((userProgress.score / (userProgress.completed.length * 10)) * 100)) : 0;
-            document.getElementById('stat-accuracy').innerText = accuracy + "%";
-            document.getElementById('stat-level').innerText = userProgress.completed.length > 3 ? "Intermédiaire" : "Débutant";
-        }
-
-        let coursesData = COURSES; // Fallback
-
-        async function loadCourses() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('courses')
-                    .select('*');
-
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    coursesData = data;
-                }
-            } catch (err) {
-                console.warn("Supabase fetch failed, using internal COURSES:", err);
-            }
-
-            const list = document.getElementById('course-list');
-            list.innerHTML = coursesData.map(c => `
-                <div class="course-card" onclick="openCourse(${c.id})">
-                    <div style="display:flex; justify-content:space-between;">
-                        <h3>${c.title}</h3>
-                        <span>${userProgress.completed.includes(c.id) ? '✅' : '⏳'}</span>
-                    </div>
-                    <p>${c.description || c.desc}</p>
+        async function showChapters(levelId, levelName) {
+            document.getElementById('content-header').innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="location.reload()" style="background: none; border: 1px solid; color: var(--primary-blue); padding: 5px 10px;">←</button>
+                    <h2>${levelName}</h2>
                 </div>
-            `).join('');
-        }
-
-        function openCourse(id) {
-            const course = coursesData.find(c => c.id === id);
-            const disp = document.getElementById('course-display');
-
-            let exercisesHtml = course.exercises.map((ex, idx) => `
-                <div class="exercise-block" style="margin-top:2rem; background:rgba(0,0,0,0.2); padding:1rem; border-radius:10px;">
-                    <p><b>Question ${idx + 1}:</b> ${ex.question}</p>
-                    <input type="number" id="ans-${id}-${idx}" placeholder="Ta réponse" style="width:100px; margin-right:10px;">
-                    <button onclick="checkAnswer(${id}, ${idx}, ${ex.answer})" class="btn-signup">Valider</button>
-                    <span id="feedback-${id}-${idx}"></span>
-                </div>
-            `).join('');
-
-            disp.innerHTML = `
-                <button onclick="loadCourses()" style="background:none; color:var(--primary-blue); border:1px solid; margin-bottom:1rem; cursor:pointer;">← Retour aux cours</button>
-                <h2>${course.title}</h2>
-                <div class="theory-block" style="background:rgba(255,255,255,0.05); padding:1.5rem; border-radius:12px; border-left:4px solid var(--accent-gold); margin-top:1rem;">
-                    <p>${course.theory}</p>
-                </div>
-                ${exercisesHtml}
+                <p>Choisissez un chapitre pour voir les ressources.</p>
             `;
-            document.getElementById('robot-speech').innerText = `Explorons ensemble : ${course.title}. Tu vas y arriver !`;
+
+            const { data: chapters, error } = await supabaseClient
+                .from('chapters')
+                .select('*')
+                .eq('level_id', levelId)
+                .order('display_order');
+
+            const content = document.getElementById('dynamic-content');
+            if (chapters && chapters.length > 0) {
+                content.innerHTML = `<div style="display: flex; flex-direction: column; gap: 1rem;">
+                    ${chapters.map(ch => `
+                        <div class="course-card" onclick="showResources(${ch.id}, '${ch.title}', '${levelName}')">
+                            <h3>${ch.title}</h3>
+                            <p style="font-size: 0.8rem; opacity: 0.7;">Cliquez pour voir les cours et exercices</p>
+                        </div>
+                    `).join('')}
+                </div>`;
+            } else {
+                content.innerHTML = `<p style="text-align: center; opacity: 0.5; margin-top: 2rem;">Aucun chapitre disponible pour ce niveau.</p>`;
+            }
+            updateRobotSpeech(`On explore le niveau ${levelName}. Quel chapitre t'intéresse ?`);
+        }
+
+        async function showResources(chapterId, chapterTitle, levelName) {
+            document.getElementById('content-header').innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="showChapters(${currentLevels.find(l => l.name === levelName).id}, '${levelName}')" style="background: none; border: 1px solid; color: var(--primary-blue); padding: 5px 10px;">←</button>
+                    <h2>${chapterTitle}</h2>
+                </div>
+            `;
+
+            const { data: resources, error } = await supabaseClient
+                .from('resources')
+                .select('*')
+                .eq('chapter_id', chapterId);
+
+            const content = document.getElementById('dynamic-content');
+            if (resources && resources.length > 0) {
+                const cours = resources.filter(r => r.type === 'cours');
+                const ex = resources.filter(r => r.type === 'exercice');
+
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h3 style="margin-bottom: 1rem; border-bottom: 2px solid var(--primary-blue); display: inline-block;">📑 Cours</h3>
+                            ${renderResourceList(cours)}
+                        </div>
+                        <div>
+                            <h3 style="margin-bottom: 1rem; border-bottom: 2px solid var(--primary-green); display: inline-block;">✏️ Exercices</h3>
+                            ${renderResourceList(ex)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `<p style="text-align: center; opacity: 0.5; margin-top: 2rem;">Aucune ressource pour ce chapitre.</p>`;
+            }
+        }
+
+        function renderResourceList(list) {
+            if (list.length === 0) return `<p style="opacity: 0.5; font-style: italic;">Bientôt disponible...</p>`;
+            return list.map(r => `
+                <div class="admin-card" style="margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.02);">
+                    <h4 style="margin-bottom: 0.8rem;">${r.title}</h4>
+                    <div style="display: flex; gap: 10px;">
+                        ${r.pdf_url ? `<a href="${r.pdf_url}" target="_blank" title="PDF" style="text-decoration: none; font-size: 1.2rem;">📕</a>` : ''}
+                        ${r.docx_url ? `<a href="${r.docx_url}" target="_blank" title="Word" style="text-decoration: none; font-size: 1.2rem;">📘</a>` : ''}
+                        ${r.latex_url ? `<a href="${r.latex_url}" target="_blank" title="LaTeX" style="text-decoration: none; font-size: 1.2rem;">📙</a>` : ''}
+                        ${r.interactive_id ? `<button onclick="openInteractive(${r.interactive_id})" style="padding: 2px 8px; font-size: 0.7rem; background: var(--accent-gold); color: black;">Mode Interactif</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function checkAnswer(courseId, exIdx, correct) {
@@ -645,9 +699,11 @@
 
         // --- NEW CHAT LOGIC ---
         function updateRobotSpeech(text) {
-            document.getElementById('robot-speech').innerText = text;
+            // Update both robot areas if they exist
+            if (document.getElementById('robot-speech')) document.getElementById('robot-speech').innerText = text;
+            if (document.getElementById('robot-speech-small')) document.getElementById('robot-speech-small').innerText = text;
+
             addChatMessage(text, 'robot');
-            // Trigger mouth movement
             isRobotSpeaking = true;
             setTimeout(() => isRobotSpeaking = false, 3000);
         }
