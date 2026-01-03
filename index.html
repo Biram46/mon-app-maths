@@ -710,18 +710,48 @@
                 </div>
             `;
 
-            const { data: resources, error } = await supabaseClient
+            // 1. Fetch Standard Resources
+            const { data: resources } = await supabaseClient
                 .from('resources')
                 .select('*')
                 .eq('chapter_id', chapterId);
 
-            const content = document.getElementById('dynamic-content');
-            if (resources && resources.length > 0) {
-                const cours = resources.filter(r => r.type === 'cours');
-                const ex = resources.filter(r => r.type === 'exercice');
+            // 2. Fetch Uploaded Interactive Exercises
+            // Note: We match by String names as stored in admin.
+            const { data: interactives } = await supabaseClient
+                .from('interactive_exercises')
+                .select('*')
+                .eq('level', levelName)
+                .eq('chapter', chapterTitle); // Ensure this matches EXACTLY what is stored (e.g. "Level > Title" or just "Title"). 
+            // In admin we stored "Level > Title" in 'chapter' column?
+            // Wait, in admin.html: `const chapterText = chapterSelect.options[chapterSelect.selectedIndex].text;`
+            // And `loadChapters` sets option text to: `${ch.levels.name} > ${ch.title}`.
+            // So here `chapterTitle` is just the Title. `levelName` is Level.
+            // So filtering by `chapterTitle` might fail if DB stores "Level > Title".
+            // I need to reconstruct the string or change the query.
+            // The stored string in DB is "Level > Title".
 
+            const dbChapterString = `${levelName} > ${chapterTitle}`;
+
+            // Re-fetch with correct string if needed, or if I stored just title?
+            // In admin I stored: `chapter: chapterText`.
+            // So I should query: `.eq('chapter', dbChapterString)`
+
+            const { data: interactivesList } = await supabaseClient
+                .from('interactive_exercises')
+                .select('*')
+                .eq('level', levelName)
+                .eq('chapter', dbChapterString);
+
+            const content = document.getElementById('dynamic-content');
+
+            const cours = resources ? resources.filter(r => r.type === 'cours') : [];
+            const ex = resources ? resources.filter(r => r.type === 'exercice') : [];
+            const interactiveFiles = interactivesList || [];
+
+            if (cours.length > 0 || ex.length > 0 || interactiveFiles.length > 0) {
                 content.innerHTML = `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                         <div>
                             <h3 style="margin-bottom: 1rem; border-bottom: 2px solid var(--primary-blue); display: inline-block;">📑 Cours</h3>
                             ${renderResourceList(cours)}
@@ -730,6 +760,10 @@
                             <h3 style="margin-bottom: 1rem; border-bottom: 2px solid var(--primary-green); display: inline-block;">✏️ Exercices</h3>
                             ${renderResourceList(ex)}
                         </div>
+                        <div>
+                            <h3 style="margin-bottom: 1rem; border-bottom: 2px solid #E91E63; display: inline-block;">🧩 Interactifs</h3>
+                            ${renderInteractiveList(interactiveFiles)}
+                        </div>
                     </div>
                 `;
             } else {
@@ -737,6 +771,37 @@
             }
         }
 
+        function renderInteractiveList(list) {
+            if (list.length === 0) return `<p style="opacity: 0.5; font-style: italic;">Aucun exercice interactif.</p>`;
+            return list.map(i => `
+                <div class="admin-card" style="margin-bottom: 1rem; padding: 1rem; background: rgba(233, 30, 99, 0.1); border: 1px solid #E91E63;">
+                    <h4 style="margin-bottom: 0.4rem;">${i.title}</h4>
+                    <p style="font-size:0.8rem; margin-bottom:0.8rem; opacity:0.8;">${i.part}</p>
+                    <button onclick="openUploadedInteractive('${i.file_url}', '${i.title.replace(/'/g, "\\'")}')" 
+                        style="padding: 0.5rem 1rem; font-size: 0.9rem; background: #E91E63; color: white;">Commencer 🚀</button>
+                </div>
+            `).join('');
+        }
+
+        function openUploadedInteractive(url, title) {
+            document.getElementById('interactive-title').innerText = "🧩 " + title;
+            const container = document.getElementById('interactive-body');
+
+            // Inject Iframe
+            container.innerHTML = `
+                <div style="width:100%; height:70vh; background:white; border-radius:8px; overflow:hidden;">
+                    <iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>
+                </div>
+                <div style="margin-top:1rem; text-align:center; font-size:0.9rem; opacity:0.7;">
+                    Complétez l'exercice pour valider votre note.
+                </div>
+            `;
+
+            toggleModal('interactive-modal');
+        }
+
+        // Keep old function for backward compatibility if needed, or remove. 
+        // Renaming it to avoid conflict if I kept the calls in verify, but I'll leave it as fallback/legacy.
         function openInteractive(courseId) {
             const course = COURSES.find(c => c.id == courseId);
             if (!course) {
@@ -800,11 +865,38 @@
                     await saveProgress();
                 }
             } else {
-                feedback.innerHTML = " ❌ Essaie encore";
+                feedback.innerHTML = " ❌ Essaie encore !";
                 feedback.style.color = "var(--primary-red)";
-                updateRobotSpeech("Presque ! Réfléchis bien à la théorie.");
+                updateRobotSpeech("Aïe, ce n'est pas ça. Réessaie !");
             }
         }
+
+        // --- POST MESSAGE LISTENER FOR IFRAME GRADES ---
+        window.addEventListener('message', async (event) => {
+            // Sécurité : vérifier l'origine si nécessaire, mais ici on accepte les fichiers du storage Supabase
+            // Format attendu: { type: 'SCORE_SUBMIT', score: 18, max: 20, title: 'Quiz 1' }
+
+            const data = event.data;
+            if (data && data.type === 'SCORE_SUBMIT') {
+                console.log("Note reçue :", data);
+
+                // Calcul du score normalisé sur 100 pour la gamification
+                const normalizedScore = (data.score / data.max) * 100;
+
+                // Save specific exercise result (Optional: Create 'results' table later)
+                // For now, just add XP to global userProgress
+
+                userProgress.score += Math.round(normalizedScore / 10); // +10 XP for 100%, etc.
+                await saveProgress();
+
+                updateRobotSpeech(`Bravo ! Note reçue : ${data.score}/${data.max}. Progression sauvegardée.`);
+                alert(`Note enregistrée : ${data.score}/${data.max}`);
+
+                // Close modal optionally?
+                // toggleModal('interactive-modal');
+            }
+        });
+
 
         // --- NEW CHAT LOGIC ---
         function updateRobotSpeech(text) {

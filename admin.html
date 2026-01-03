@@ -255,6 +255,9 @@
                         <button onclick="showPanel('resources')"
                             style="background: var(--bg-card); border: 1px solid var(--primary-green);">📄
                             Ressources</button>
+                        <button onclick="showPanel('interactive')"
+                            style="background: var(--bg-card); border: 1px solid #E91E63;">🧩
+                            Interactifs</button>
                     </div>
                 </div>
 
@@ -347,6 +350,39 @@
                         <button type="submit" style="grid-column: span 2;">Enregistrer la Ressource</button>
                     </form>
                 </div>
+
+                <!-- Panel: Interactive Exercises -->
+                <div id="panel-interactive" class="admin-panel" style="display: none;">
+                    <h3>Ajouter un Exercice Interactif (HTML)</h3>
+                    <form id="add-interactive-form"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div class="form-group">
+                            <label>Niveau</label>
+                            <select id="int-level-id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Chapitre</label>
+                            <select id="int-chapter-id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Partie / Sous-titre</label>
+                            <input type="text" id="int-part" placeholder="Ex: Partie 1 - Calculs" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Titre de l'Exercice</label>
+                            <input type="text" id="int-title" placeholder="Ex: Quiz Triangles" required>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Fichier HTML (.html)</label>
+                            <input type="file" id="int-file" accept=".html" required>
+                        </div>
+                        <button type="submit" style="grid-column: span 2; background-color: #E91E63;">Uploader et
+                            Enregistrer</button>
+                    </form>
+
+                    <h4 style="margin-top: 2rem; margin-bottom: 1rem; color: #E91E63;">Exercices existants</h4>
+                    <div id="admin-interactive-list" style="max-height: 400px; overflow-y: auto;"></div>
+                </div>
             </section>
 
             <!-- Stats Section (Moved to bottom) -->
@@ -428,6 +464,7 @@
             try { await loadLevels(); } catch (e) { console.error("Erreur Levels:", e); }
             try { await loadChapters(); } catch (e) { console.error("Erreur Chapters:", e); }
             try { await loadStats(); } catch (e) { console.error("Erreur Stats:", e); }
+            try { await loadInteractiveExercises(); } catch (e) { console.error("Erreur Interactive:", e); }
         }
 
         async function loadLevels() {
@@ -447,6 +484,11 @@
             // Update selects
             const select = document.getElementById('chapter-level-id');
             if (select) select.innerHTML = data.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+
+            // Update interactive select
+            const intSelect = document.getElementById('int-level-id');
+            if (intSelect) intSelect.innerHTML = data.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+
         }
 
         async function deleteLevel(id) {
@@ -483,6 +525,11 @@
             // Update resource select
             const resSelect = document.getElementById('res-chapter-id');
             resSelect.innerHTML = data.map(ch => `<option value="${ch.id}">${ch.levels.name} > ${ch.title}</option>`).join('');
+
+            // Update interactive chapter select
+            const intChapterSelect = document.getElementById('int-chapter-id');
+            intChapterSelect.innerHTML = data.map(ch => `<option value="${ch.id}">${ch.levels.name} > ${ch.title}</option>`).join('');
+
 
             // Update chapter list
             const list = document.getElementById('admin-chapter-list');
@@ -541,6 +588,111 @@
                     <td><span class="badge badge-success">Actif</span></td>
                 </tr>
             `).join('');
+        }
+
+        // --- INTERACTIVE EXERCISES LOGIC ---
+
+        async function loadInteractiveExercises() {
+            const { data, error } = await supabaseClient
+                .from('interactive_exercises')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn("Table interactive_exercises introuvable ou erreur:", error.message);
+                return;
+            }
+
+            const list = document.getElementById('admin-interactive-list');
+            list.innerHTML = data.map(ex => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.8rem; background:rgba(233, 30, 99, 0.1); margin-bottom:0.5rem; border-radius:8px; border:1px solid #E91E63;">
+                    <div>
+                        <div style="font-weight:bold;">${ex.title}</div>
+                        <div style="font-size:0.8rem; opacity:0.7;">${ex.level} > ${ex.chapter} (${ex.part})</div>
+                    </div>
+                    <button onclick="deleteInteractive('${ex.id}', '${ex.file_path}')" style="background:var(--primary-red); padding:0.4rem 0.8rem; font-size:0.8rem;">Supprimer</button>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('add-interactive-form').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('int-file');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Veuillez sélectionner un fichier HTML.");
+                return;
+            }
+            const file = fileInput.files[0];
+            const title = document.getElementById('int-title').value;
+
+            const levelSelect = document.getElementById('int-level-id');
+            const levelName = levelSelect.options[levelSelect.selectedIndex].text;
+
+            const chapterSelect = document.getElementById('int-chapter-id');
+            const chapterText = chapterSelect.options[chapterSelect.selectedIndex].text;
+
+            const part = document.getElementById('int-part').value;
+
+            // 1. Upload to Storage
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${title.replace(/\s+/g, '-')}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                .from('exercises-html')
+                .upload(filePath, file);
+
+            if (uploadError) {
+                alert("Erreur Upload: " + uploadError.message);
+                return;
+            }
+
+            // 2. Get Public URL
+            const { data: urlData } = supabaseClient.storage
+                .from('exercises-html')
+                .getPublicUrl(filePath);
+
+            // 3. Insert Record
+            const { error: dbError } = await supabaseClient
+                .from('interactive_exercises')
+                .insert([{
+                    title: title,
+                    level: levelName,
+                    chapter: chapterText,
+                    part: part,
+                    file_url: urlData.publicUrl,
+                    file_path: filePath
+                }]);
+
+            if (dbError) {
+                alert("Erreur DB: " + dbError.message);
+            } else {
+                alert("Exercice mis en ligne avec succès !");
+                e.target.reset();
+                loadInteractiveExercises();
+            }
+        };
+
+        async function deleteInteractive(id, filePath) {
+            if (!confirm("Supprimer cet exercice ?")) return;
+
+            // 1. Delete from Storage
+            if (filePath && filePath !== 'null') {
+                const { error: storageError } = await supabaseClient.storage
+                    .from('exercises-html')
+                    .remove([filePath]);
+                if (storageError) console.error("Storage delete error:", storageError);
+            }
+
+            // 2. Delete from DB
+            const { error } = await supabaseClient
+                .from('interactive_exercises')
+                .delete()
+                .eq('id', id);
+
+            if (!error) loadInteractiveExercises();
+            else alert("Erreur DB: " + error.message);
         }
     </script>
 </body>
