@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Tuteur Maths Robot</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-blue: #2196F3;
+            --primary-green: #4CAF50;
+            --primary-red: #f44336;
+            --bg-dark: #121212;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --text-main: #e0e0e0;
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-gold: #FFD700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            padding: 1rem 2rem;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(45deg, var(--primary-blue), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-login {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-signup {
+            background: var(--primary-green);
+            color: white;
+        }
+
+        .btn-logout {
+            background: var(--primary-red);
+            color: white;
+            display: none;
+        }
+
+        /* --- Layout --- */
+        main {
+            display: grid;
+            grid-template-columns: 25% 1fr 25%;
+            gap: 1rem;
+            padding: 1rem;
+            flex-grow: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .column {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            overflow-y: auto;
+            backdrop-filter: blur(5px);
+        }
+
+
+
+        /* --- Chat UI --- */
+        .chat-container {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            height: 200px;
+        }
+
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chat-message {
+            padding: 0.4rem 0.8rem;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .user-msg {
+            align-self: flex-end;
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .robot-msg {
+            align-self: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input-area input {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            margin: 0;
+        }
+
+        /* --- Content Column --- */
+        .content-area {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .course-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .course-card:hover {
+            border-color: var(--primary-blue);
+            background: rgba(33, 150, 243, 0.05);
+        }
+
+        /* --- Progress Column --- */
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+        }
+
+        /* --- Modals --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #1e1e1e;
+            padding: 2.5rem;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--glass-border);
+        }
+
+        form input {
+            width: 100%;
+            padding: 0.8rem;
+            margin: 0.8rem 0;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+
+            .column:nth-child(1),
+            .column:nth-child(3) {
+                order: 2;
+            }
+
+            .column:nth-child(2) {
+                order: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">🤖 Tuteur Maths Robot</div>
+        <div class="auth-buttons">
+            <button class="btn-login" onclick="toggleModal('login-modal')">Connexion</button>
+            <button class="btn-signup" onclick="toggleModal('signup-modal')">Inscription</button>
+            <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
+        </div>
+    </header>
+
+    <main id="app-content" style="display: none;">
+        <!-- Robot Column -->
+        <aside class="column" style="display: flex; flex-direction: column;">
+            <h3>Tuteur Virtuel</h3>
+            <canvas id="robot-canvas"
+                style="width: 100%; aspect-ratio: 1; background: rgba(0, 0, 0, 0.2); border-radius: 50%; margin-bottom: 1rem;"></canvas>
+            <div class="speech-bubble" id="robot-speech"
+                style="background: white; color: black; padding: 1rem; border-radius: 12px; position: relative; margin-top: 1rem; font-size: 0.9rem; line-height: 1.4;">
+                Bonjour ! Je suis ton tuteur robot. Prêt à faire des maths ?
+            </div>
+
+            <div class="chat-container">
+                <div id="chat-messages"></div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Pose une question..."
+                        onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                    <button onclick="sendChatMessage()" style="padding: 0.5rem;">🚀</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Course Area -->
+        <section class="column content-area" id="course-display">
+            <h2>Tes Cours</h2>
+            <div id="course-list">
+                <!-- Courses injected here -->
+            </div>
+        </section>
+
+        <!-- Progress/Stats Column -->
+        <aside class="column">
+            <h3>Progression</h3>
+            <div id="stats-container">
+                <div class="stat-item"><span>Exercices finis</span> <b id="stat-done">0</b></div>
+                <div class="stat-item"><span>Précision</span> <b id="stat-accuracy">0%</b></div>
+                <div class="stat-item"><span>Niveau</span> <b id="stat-level">Débutant</b></div>
+            </div>
+        </aside>
+    </main>
+
+    <div id="welcome-screen"
+        style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem;">
+        <h1>Apprends les maths avec un Robot 🚀</h1>
+        <p style="margin: 1rem 0 2rem; opacity: 0.8;">Connecte-toi pour commencer ton aventure.</p>
+        <img src="math_robot_hero.png" alt="Robot Preview"
+            style="border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 100%; height: auto;">
+    </div>
+
+    <!-- Modals -->
+    <div id="login-modal" class="modal" onclick="closeOnOverlay(event)">
+        <div class="modal-content">
+            <h2>Heureux de vous revoir !</h2>
+            <form onsubmit="handleAuth(event, 'login')">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Mot de passe" required>
+                <button type="submit" class="btn-login" style="width: 100%;">Se connecter</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="signup-modal" class="modal" onclick="closeOnOverlay(event)">
+        <div class="modal-content">
+            <h2>Créer un compte</h2>
+            <form onsubmit="handleAuth(event, 'signup')">
+                <input type="email" id="signup-email" placeholder="Email" required>
+                <input type="password" id="signup-password" placeholder="Mot de passe" required>
+                <button type="submit" class="btn-signup" style="width: 100%;">S'inscrire</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIG SUPABASE ---
+        const SUPABASE_URL = "https://fhpfpnlkcvhxotbblzps.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_xxx";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- AUTH LOGIC ---
+        async function handleAuth(e, type) {
+            e.preventDefault();
+            const email = document.getElementById(`${type}-email`).value;
+            const password = document.getElementById(`${type}-password`).value;
+
+            try {
+                let result;
+                if (type === 'signup') {
+                    result = await supabaseClient.auth.signUp({ email, password });
+                    alert("Vérifiez votre email !");
+                } else {
+                    result = await supabaseClient.auth.signInWithPassword({ email, password });
+                }
+
+                if (result.error) throw result.error;
+                toggleModal(`${type}-modal`);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+        }
+
+        // Listen for Auth changes
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            const loggedIn = !!session;
+            document.querySelector('.btn-login').style.display = loggedIn ? 'none' : 'block';
+            document.querySelector('.btn-signup').style.display = loggedIn ? 'none' : 'block';
+            document.querySelector('.btn-logout').style.display = loggedIn ? 'block' : 'none';
+            document.getElementById('app-content').style.display = loggedIn ? 'grid' : 'none';
+            document.getElementById('welcome-screen').style.display = loggedIn ? 'none' : 'flex';
+
+            if (loggedIn) {
+                initApp(session.user);
+            }
+        });
+
+        // --- APP LOGIC ---
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function closeOnOverlay(e) {
+            if (e.target.className === 'modal') e.target.style.display = 'none';
+        }
+
+        function initApp(user) {
+            console.log("App initialized for:", user.email);
+            loadCourses();
+            startRobot();
+        }
+
+        // --- ROBOT ENGINE ---
+        const canvas = document.getElementById('robot-canvas');
+        const ctx = canvas.getContext('2d');
+        let blinkTimer = 0;
+
+        function startRobot() {
+            canvas.width = 400;
+            canvas.height = 400;
+            requestAnimationFrame(animateRobot);
+        }
+
+        function animateRobot(time) {
+            ctx.clearRect(0, 0, 400, 400);
+
+            // Body/Head (Gold Gradient)
+            const grad = ctx.createRadialGradient(200, 200, 50, 200, 200, 150);
+            grad.addColorStop(0, '#FFD700');
+            grad.addColorStop(1, '#B8860B');
+
+            ctx.beginPath();
+            ctx.arc(200, 200, 100, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+
+            // Eyes
+            const eyeY = 180 + Math.sin(time / 500) * 5; // Floating eye movement
+            blinkTimer++;
+            const isBlinking = blinkTimer % 200 > 190;
+
+            ctx.fillStyle = '#000';
+            // Left Eye
+            if (isBlinking) {
+                ctx.fillRect(160, eyeY, 20, 2);
+            } else {
+                ctx.beginPath();
+                ctx.arc(160, eyeY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#00FFFF'; // Glow
+                ctx.beginPath();
+                ctx.arc(160, eyeY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Right Eye
+            ctx.fillStyle = '#000';
+            if (isBlinking) {
+                ctx.fillRect(220, eyeY, 20, 2);
+            } else {
+                ctx.beginPath();
+                ctx.arc(220, eyeY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#00FFFF';
+                ctx.beginPath();
+                ctx.arc(220, eyeY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Mouth (Wave)
+            ctx.strokeStyle = '#000';
+            ctx.beginPath();
+            ctx.moveTo(170, 240);
+            ctx.quadraticCurveTo(200, 250 + Math.sin(time / 200) * 10, 230, 240);
+            ctx.stroke();
+
+            requestAnimationFrame(animateRobot);
+        }
+
+        // --- CONTENT DATA ---
+        const COURSES = [
+            {
+                id: 1,
+                title: "Les Nombres Entiers",
+                desc: "Maîtriser l'addition et la soustraction.",
+                theory: "Les nombres entiers sont les nombres que nous utilisons pour compter : 0, 1, 2, 3... <b>L'addition</b> permet de combiner deux quantités. Par exemple, 5 + 3 = 8. <b>La soustraction</b> permet de trouver la différence : 10 - 4 = 6.",
+                exercises: [
+                    { question: "Combien font 12 + 15 ?", answer: 27 },
+                    { question: "Si j'ai 20 pommes et j'en mange 7, combien m'en reste-t-il ?", answer: 13 }
+                ]
+            },
+            {
+                id: 2,
+                title: "Multiplication & Division",
+                desc: "Les bases du calcul rapide.",
+                theory: "La <b>multiplication</b> est une addition répétée. 3 × 4 c'est 4 + 4 + 4 = 12. La <b>division</b> est l'opération inverse : on partage une quantité en parts égales. 12 ÷ 3 = 4 car 4 + 4 + 4 = 12.",
+                exercises: [
+                    { question: "Combien font 6 × 7 ?", answer: 42 },
+                    { question: "Partage 24 billes entre 4 amis. Combien en ont-ils chacun ?", answer: 6 }
+                ]
+            },
+            {
+                id: 3,
+                title: "Les Fractions",
+                desc: "Comprendre les parts d'un tout.",
+                theory: "Une fraction représente une partie d'une unité. Par exemple, 1/2 c'est la moitié de quelque chose. Le chiffre du haut est le <b>numérateur</b> (combien de parts on a), le bas est le <b>dénominateur</b> (en combien de parts l'unité est coupée).",
+                exercises: [
+                    { question: "Si je coupe un gâteau en 4 et j'en prends 2 parts, quelle fraction ai-je (en simplifié, 1 pour 1/2) ?", answer: 2 },
+                    { question: "Quelle est la moitié de 50 ?", answer: 25 }
+                ]
+            },
+            {
+                id: 4,
+                title: "Géométrie Plane",
+                desc: "Angles, triangles et polygones.",
+                theory: "La géométrie étudie les formes. Un <b>triangle</b> a 3 côtés. Un <b>carré</b> a 4 côtés égaux et 4 angles droits. La somme des angles d'un triangle est toujours 180°.",
+                exercises: [
+                    { question: "Combien de côtés possède un hexagone ?", answer: 6 },
+                    { question: "Si un carré a un côté de 5cm, quelle est sa surface (en cm²) ?", answer: 25 }
+                ]
+            },
+            {
+                id: 5,
+                title: "Calcul de Périmètres",
+                desc: "Mesurer les contours.",
+                theory: "Le <b>périmètre</b> est la longueur du contour d'une figure plate. Pour un rectangle, c'est (Longueur + largeur) × 2. Pour un carré, c'est Côté × 4.",
+                exercises: [
+                    { question: "Périmètre d'un carré de 10 m de côté ?", answer: 40 },
+                    { question: "Périmètre d'un rectangle de 5m sur 3m ?", answer: 16 }
+                ]
+            }
+        ];
+
+        let currentUser = null;
+        let userProgress = { completed: [], score: 0 };
+
+        async function initApp(user) {
+            currentUser = user;
+            await loadUserProgress();
+            loadCourses();
+            startRobot();
+            updateStatsUI();
+        }
+
+        async function loadUserProgress() {
+            const { data, error } = await supabaseClient
+                .from('user_stats')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .single();
+
+            if (data) {
+                userProgress = data.progress_data || userProgress;
+            } else if (error && error.code === 'PGRST116') {
+                // No row found, create one
+                await supabaseClient.from('user_stats').insert({
+                    user_id: currentUser.id,
+                    progress_data: userProgress
+                });
+            }
+        }
+
+        async function saveProgress() {
+            await supabaseClient
+                .from('user_stats')
+                .update({ progress_data: userProgress })
+                .eq('user_id', currentUser.id);
+            updateStatsUI();
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stat-done').innerText = userProgress.completed.length;
+            const accuracy = userProgress.completed.length > 0 ? Math.min(100, Math.round((userProgress.score / (userProgress.completed.length * 10)) * 100)) : 0;
+            document.getElementById('stat-accuracy').innerText = accuracy + "%";
+            document.getElementById('stat-level').innerText = userProgress.completed.length > 3 ? "Intermédiaire" : "Débutant";
+        }
+
+        function loadCourses() {
+            const list = document.getElementById('course-list');
+            list.innerHTML = COURSES.map(c => `
+                <div class="course-card" onclick="openCourse(${c.id})">
+                    <div style="display:flex; justify-content:space-between;">
+                        <h3>${c.title}</h3>
+                        <span>${userProgress.completed.includes(c.id) ? '✅' : '⏳'}</span>
+                    </div>
+                    <p>${c.desc}</p>
+                </div>
+            `).join('');
+        }
+
+        function openCourse(id) {
+            const course = COURSES.find(c => c.id === id);
+            const disp = document.getElementById('course-display');
+
+            let exercisesHtml = course.exercises.map((ex, idx) => `
+                <div class="exercise-block" style="margin-top:2rem; background:rgba(0,0,0,0.2); padding:1rem; border-radius:10px;">
+                    <p><b>Question ${idx + 1}:</b> ${ex.question}</p>
+                    <input type="number" id="ans-${id}-${idx}" placeholder="Ta réponse" style="width:100px; margin-right:10px;">
+                    <button onclick="checkAnswer(${id}, ${idx}, ${ex.answer})" class="btn-signup">Valider</button>
+                    <span id="feedback-${id}-${idx}"></span>
+                </div>
+            `).join('');
+
+            disp.innerHTML = `
+                <button onclick="loadCourses()" style="background:none; color:var(--primary-blue); border:1px solid; margin-bottom:1rem; cursor:pointer;">← Retour aux cours</button>
+                <h2>${course.title}</h2>
+                <div class="theory-block" style="background:rgba(255,255,255,0.05); padding:1.5rem; border-radius:12px; border-left:4px solid var(--accent-gold); margin-top:1rem;">
+                    <p>${course.theory}</p>
+                </div>
+                ${exercisesHtml}
+            `;
+            document.getElementById('robot-speech').innerText = `Explorons ensemble : ${course.title}. Tu vas y arriver !`;
+        }
+
+        async function checkAnswer(courseId, exIdx, correct) {
+            const input = document.getElementById(`ans-${courseId}-${exIdx}`);
+            const feedback = document.getElementById(`feedback-${courseId}-${exIdx}`);
+            const val = parseInt(input.value);
+
+            if (val === correct) {
+                feedback.innerHTML = " ✅ BRAVO !";
+                feedback.style.color = "var(--primary-green)";
+                updateRobotSpeech("C'est la bonne réponse ! Impressionnant.");
+
+                // Update progress
+                if (!userProgress.completed.includes(courseId)) {
+                    userProgress.completed.push(courseId);
+                    userProgress.score += 10;
+                    await saveProgress();
+                }
+            } else {
+                feedback.innerHTML = " ❌ Essaie encore";
+                feedback.style.color = "var(--primary-red)";
+                updateRobotSpeech("Presque ! Réfléchis bien à la théorie.");
+            }
+        }
+
+        // --- NEW CHAT LOGIC ---
+        function updateRobotSpeech(text) {
+            document.getElementById('robot-speech').innerText = text;
+            addChatMessage(text, 'robot');
+            // Trigger mouth movement
+            isRobotSpeaking = true;
+            setTimeout(() => isRobotSpeaking = false, 3000);
+        }
+
+        function addChatMessage(text, sender) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${sender}-msg`;
+            msgDiv.innerText = text;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addChatMessage(text, 'user');
+            input.value = '';
+
+            // Simple Logic for Robot Responses
+            setTimeout(() => {
+                let response = "Je n'ai pas bien compris, mais je suis là pour t'aider en maths !";
+                const lowerText = text.toLowerCase();
+
+                if (lowerText.includes("aide") || lowerText.includes("aider")) {
+                    response = "Bien sûr ! Choisis un cours dans la liste au milieu pour que nous commencions.";
+                } else if (lowerText.includes("bonjour") || lowerText.includes("salut")) {
+                    response = "Bonjour ! Prêt à devenir un champion des mathématiques ?";
+                } else if (lowerText.includes("merci")) {
+                    response = "De rien ! Ma mission est de te voir réussir.";
+                } else if (lowerText.includes("difficile")) {
+                    response = "Les maths demandent de la pratique, mais avec moi, tu vas progresser vite !";
+                }
+
+                updateRobotSpeech(response);
+            }, 1000);
+        }
+
+        let isRobotSpeaking = false;
+        // Modified animation mouth to use isRobotSpeaking
+        const originalAnimateRobot = animateRobot;
+        animateRobot = function (time) {
+            ctx.clearRect(0, 0, 400, 400);
+
+            // Body/Head (Gold Gradient)
+            const grad = ctx.createRadialGradient(200, 200, 50, 200, 200, 150);
+            grad.addColorStop(0, '#FFD700');
+            grad.addColorStop(1, '#B8860B');
+
+            ctx.beginPath();
+            ctx.arc(200, 200, 100, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+
+            // Eyes
+            const eyeY = 180 + Math.sin(time / 500) * 5;
+            blinkTimer++;
+            const isBlinking = blinkTimer % 200 > 190;
+
+            ctx.fillStyle = '#000';
+            if (isBlinking) {
+                ctx.fillRect(160, eyeY, 20, 2);
+            } else {
+                ctx.beginPath();
+                ctx.arc(160, eyeY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#00FFFF';
+                ctx.beginPath();
+                ctx.arc(160, eyeY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = '#000';
+            if (isBlinking) {
+                ctx.fillRect(220, eyeY, 20, 2);
+            } else {
+                ctx.beginPath();
+                ctx.arc(220, eyeY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#00FFFF';
+                ctx.beginPath();
+                ctx.arc(220, eyeY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Mouth (Animation when speaking)
+            ctx.strokeStyle = '#000';
+            ctx.beginPath();
+            ctx.moveTo(170, 240);
+            const mouthWave = isRobotSpeaking ? Math.sin(time / 50) * 15 : Math.sin(time / 200) * 5;
+            ctx.quadraticCurveTo(200, 250 + mouthWave, 230, 240);
+            ctx.stroke();
+
+            requestAnimationFrame(animateRobot);
+        }
+
+    </script>
+</body>
+
+</html>
