@@ -1,3 +1,4 @@
+
 /**
  * Gestionnaire de ressources pour mon-app-maths
  * Gère l'upload et la récupération de fichiers depuis Supabase Storage
@@ -56,7 +57,7 @@ async function uploadRessource(file, niveau, chapitre, type, ext) {
   const path = buildPath(niveau, chapitre, type, fileName);
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .storage
       .from(BUCKET_NAME)
       .upload(path, file, {
@@ -69,7 +70,8 @@ async function uploadRessource(file, niveau, chapitre, type, ext) {
       return { success: false, error: error.message };
     }
 
-    return { success: true, path: path };  } catch (err) {
+    return { success: true, path: path };
+  } catch (err) {
     console.error('Erreur lors de l\'upload:', err);
     return { success: false, error: err.message };
   }
@@ -125,7 +127,7 @@ function getPublicUrl(niveau, chapitre, type, ext) {
   const fileName = `${slugChapitre}_${type}.${ext}`;
   const path = buildPath(niveau, chapitre, type, fileName);
 
-  const { data } = supabase
+  const { data } = supabaseClient
     .storage
     .from(BUCKET_NAME)
     .getPublicUrl(path);
@@ -172,7 +174,7 @@ async function listFiles(niveau, chapitre = null, type = null) {
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .storage
       .from(BUCKET_NAME)
       .list(prefix);
@@ -203,7 +205,7 @@ async function deleteRessource(niveau, chapitre, type, ext) {
   const path = buildPath(niveau, chapitre, type, fileName);
 
   try {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .storage
       .from(BUCKET_NAME)
       .remove([path]);
