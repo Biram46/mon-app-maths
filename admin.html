@@ -746,6 +746,13 @@
 <script>
   // Initialise le formulaire d'upload
   initUploadForm('form-ressources');
+    <script>
+// Créer le client Supabase pour ressources-manager.js
+const supabaseClient = window.supabase.createClient(
+  window.APP_CONFIG.SUPABASE_URL,
+  window.APP_CONFIG.SUPABASE_KEY
+);
+</script>
 </script>
 
 </body>
