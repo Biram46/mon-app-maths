@@ -1,3 +1,5 @@
 # Ignorer les fichiers d'environnement locaux
 .env
 .env.local
+# Ignorer le dossier de Python embeddable utilisé localement
+tools/python-embed/
