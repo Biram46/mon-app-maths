@@ -69,8 +69,7 @@ async function uploadRessource(file, niveau, chapitre, type, ext) {
       return { success: false, error: error.message };
     }
 
-    return { success: true, path: data.path };
-  } catch (err) {
+    return { success: true, path: path };  } catch (err) {
     console.error('Erreur lors de l\'upload:', err);
     return { success: false, error: err.message };
   }
