@@ -249,11 +249,9 @@
                         <button onclick="showPanel('levels')"
                             style="background: var(--bg-card); border: 1px solid var(--accent-gold);">🎓
                             Niveaux</button>
-                
-            
-            
-                        <button onclick="showPanel('resources')"
-                            Ressources</button>
+                        <button onclick="showPanel('chapters-resources')"
+                            style="background: var(--primary-blue);">📚
+                            Ressources des Chapitres</button>
                         <button onclick="showPanel('interactive')"
                             style="background: var(--bg-card); border: 1px solid #E91E63;">🧩
                             Interactifs</button>
@@ -285,100 +283,113 @@
                     <div id="admin-level-list" style="max-height: 400px; overflow-y: auto;"></div>
                 </div>
 
-                
-                
-                        <div class="form-group">
-                            <label>Titre du Chapitre</label>
-                            <input type="text" id="chapter-title" placeholder="Ex: Les suites numériques" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Ordre</label>
-                            <input type="number" id="chapter-order" value="1">
-                        </div>
-                        <button type="submit">Créer</button>
-                    </form>
-                    <div id="admin-chapter-list" style="max-height: 400px; overflow-y: auto;"></div>
-                </div>
+                <!-- Panel: Chapters & Resources Combined -->
+                <div id="panel-chapters-resources" class="admin-panel" style="display: none;">
+                    <!-- Section Chapitres -->
+                    <div style="margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 2px solid var(--glass-border);">
+                        <h3 style="color: var(--primary-blue); margin-bottom: 1.5rem;">📖 Gestion des Chapitres</h3>
+                        <form id="add-chapter-form"
+                            style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 2rem;">
+                            <div class="form-group">
+                                <label>Niveau</label>
+                                <select id="chapter-level-id" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Titre du Chapitre</label>
+                                <input type="text" id="chapter-title" placeholder="Ex: Les suites numériques" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Ordre</label>
+                                <input type="number" id="chapter-order" value="1">
+                            </div>
+                            <button type="submit">Créer Chapitre</button>
+                        </form>
+                        <div id="admin-chapter-list" style="max-height: 300px; overflow-y: auto;"></div>
+                    </div>
 
-                <!-- Panel: Resources -->
-                <div id="panel-resources" class="admin-panel" style="display: none;">
-                    <h3>Ajouter une Ressource (Cours/Exercice)</h3>
+                    <!-- Section Ressources -->
+                    <div>
+                        <h3 style="color: var(--primary-green); margin-bottom: 1.5rem;">📄 Ajouter une Ressource (Cours/Exercice)</h3>
 
-                            <!-- Nouveau formulaire d'upload de fichiers -->
-        <div style="margin-top: 2rem; padding: 1.5rem; border: 2px solid #4CAF50; border-radius: 8px; background: rgba(76, 175, 80, 0.05);">
-          <h3 style="color: #4CAF50; margin-bottom: 1rem;">📤 Upload de Fichiers (Nouveau Système)</h3>
-          <form id="form-ressources" style="display: grid; gap: 1rem;">
-            <div class="form-group">
-              <label>Niveau</label>
-              <select id="niveau" required style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; background: #1a1a1a; color: white;">
-                <option value="seconde">Seconde</option>
-                <option value="premiere">Première</option>
-                <option value="terminale">Terminale</option>
-              </select>
-            </div>
+                        <!-- Nouveau formulaire d'upload de fichiers -->
+                        <div style="margin-bottom: 2rem; padding: 1.5rem; border: 2px solid #4CAF50; border-radius: 8px; background: rgba(76, 175, 80, 0.05);">
+                            <h4 style="color: #4CAF50; margin-bottom: 1rem;">📤 Upload de Fichiers (Système Direct)</h4>
+                            <form id="form-ressources" style="display: grid; gap: 1rem;">
+                                <div class="form-group">
+                                    <label>Niveau</label>
+                                    <select id="niveau" required style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; background: #1a1a1a; color: white;">
+                                        <option value="seconde">Seconde</option>
+                                        <option value="premiere">Première</option>
+                                        <option value="terminale">Terminale</option>
+                                    </select>
+                                </div>
 
-            <div class="form-group">
-              <label>Chapitre</label>
-              <input type="text" id="chapitre" placeholder="trigonométrie" required style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; background: #1a1a1a; color: white;" />
-            </div>
+                                <div class="form-group">
+                                    <label>Chapitre</label>
+                                    <input type="text" id="chapitre" placeholder="Ex: trigonométrie" required style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; background: #1a1a1a; color: white;" />
+                                </div>
 
-            <div class="form-group">
-              <input type="file" id="file-tex" accept=".tex" style="padding: 0.5rem;" />
-            </div>
+                                <div class="form-group">
+                                    <label>Fichier TEX (LaTeX)</label>
+                                    <input type="file" id="file-tex" accept=".tex" style="padding: 0.5rem;" />
+                                </div>
 
-            <div class="form-group">
-              <label>Fichier DOCX</label>
-              <input type="file" id="file-docx" accept=".doc,.docx" style="padding: 0.5rem;" />
-            </div>
+                                <div class="form-group">
+                                    <label>Fichier DOCX</label>
+                                    <input type="file" id="file-docx" accept=".doc,.docx" style="padding: 0.5rem;" />
+                                </div>
 
-            <div class="form-group">
-              <label>Fichier PDF</label>
-              <input type="file" id="file-pdf" accept=".pdf" style="padding: 0.5rem;" />
-            </div>
+                                <div class="form-group">
+                                    <label>Fichier PDF</label>
+                                    <input type="file" id="file-pdf" accept=".pdf" style="padding: 0.5rem;" />
+                                </div>
 
-            <button type="submit" style="padding: 0.75rem 1.5rem; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold;">
-              📤 Uploader les fichiers
-            </button>
-          </form>
-        </div>
-                    <form id="add-resource-form"
-                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-                        <div class="form-group">
-                            <label>Chapitre</label>
-                            <select id="res-chapter-id" required></select>
+                                <button type="submit" style="padding: 0.75rem 1.5rem; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold;">
+                                    📤 Uploader les fichiers
+                                </button>
+                            </form>
                         </div>
-                        <div class="form-group">
-                            <label>Titre de la Ressource</label>
-                            <input type="text" id="res-title" placeholder="Ex: Exercices Corrigés" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Type</label>
-                            <select id="res-type">
-                                <option value="cours">Cours</option>
-                                <option value="exercice">Exercice</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Lien PDF</label>
-                            <input type="url" id="res-pdf" placeholder="https://...">
-                        </div>
-                        <div class="form-group">
-                            <label>Lien DOCX</label>
-                            <input type="url" id="res-docx" placeholder="https://...">
-                        </div>
-                        <div class="form-group">
-                            <label>Lien LaTeX</label>
-                            <input type="url" id="res-latex" placeholder="https://...">
-                        </div>
-                        <div class="form-group">
-                            <label>ID Interactif (Optionnel)</label>
-                            <input type="number" id="res-interactive-id"
-                                placeholder="ID (ex: 1, 2...) pour lier aux quiz robot">
-                            <small style="opacity:0.6; font-size:0.7rem;">Référence l'ID dans le tableau COURSES du
-                                code.</small>
-                        </div>
-                        <button type="submit" style="grid-column: span 2;">Enregistrer la Ressource</button>
-                    </form>
+
+                        <!-- Formulaire classique de ressource -->
+                        <form id="add-resource-form"
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label>Chapitre</label>
+                                <select id="res-chapter-id" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Titre de la Ressource</label>
+                                <input type="text" id="res-title" placeholder="Ex: Exercices Corrigés" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="res-type">
+                                    <option value="cours">Cours</option>
+                                    <option value="exercice">Exercice</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Lien PDF</label>
+                                <input type="url" id="res-pdf" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Lien DOCX</label>
+                                <input type="url" id="res-docx" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Lien LaTeX</label>
+                                <input type="url" id="res-latex" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>ID Interactif (Optionnel)</label>
+                                <input type="number" id="res-interactive-id"
+                                    placeholder="ID (ex: 1, 2...) pour lier aux quiz robot">
+                                <small style="opacity:0.6; font-size:0.7rem;">Référence l'ID dans le tableau COURSES du
+                                    code.</small>
+                            </div>
+                            <button type="submit" style="grid-column: span 2;">Enregistrer la Ressource</button>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Panel: Interactive Exercises -->
@@ -730,14 +741,15 @@
 <script>
   // Initialise le formulaire d'upload
   initUploadForm('form-ressources');
-    <script>
+</script>
+<script>
 // Créer le client Supabase pour ressources-manager.js
 const supabaseClient = window.supabase.createClient(
   window.APP_CONFIG.SUPABASE_URL,
   window.APP_CONFIG.SUPABASE_KEY
 );
 </script>
-</script>
 
 </body>
-elect = document.getElementById('chapitre');
+
+</html>
