@@ -12,7 +12,7 @@
                 var cfg = JSON.parse(xhr.responseText);
                 window.APP_CONFIG = window.APP_CONFIG || {
                     SUPABASE_URL: cfg.SUPABASE_URL || "https://fhpfpnlkcvhxotbblzps.supabase.co",
-                    SUPABASE_KEY: cfg.SUPABASE_KEY || "sb_publishable_xxx"
+                    SUPABASE_KEY: cfg.SUPABASE_KEY || "sb_publishable_wZkq0dUbn4YTVWJTL52rVw_rJOYecEL"
                 };
                 return;
             }
@@ -23,7 +23,7 @@
         // Fallback to defaults if endpoint is unavailable
         window.APP_CONFIG = window.APP_CONFIG || {
             SUPABASE_URL: "https://fhpfpnlkcvhxotbblzps.supabase.co",
-            SUPABASE_KEY: "sb_publishable_xxx"
+            SUPABASE_KEY: "sb_publishable_wZkq0dUbn4YTVWJTL52rVw_rJOYecEL"
         };
     }
 
